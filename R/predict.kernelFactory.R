@@ -30,8 +30,25 @@ numericcolumns <- newdata[,object$nmDtrn]
 
 numericcolumns <- data.frame(t(t(numericcolumns )/as.numeric(object$rngs)))
 
-newdata <- data.frame(numericcolumns,newdata[,sapply(newdata,is.factor)])
 
+if ( length(data.frame(newdata[,which(sapply(newdata[,names(newdata) != "Y"],is.factor))]  )) > 1 ) {
+		
+		newdata <- data.frame(numericcolumns,newdata[,which(sapply(newdata[,names(newdata)!= "Y"],is.factor))])
+	
+} else if ( length(data.frame(newdata[,which(sapply(newdata[,names(newdata) != "Y"],is.factor))]  )) == 1 ) {
+		
+		tempdf <- data.frame(newdata[,which(sapply(newdata[,names(newdata)!= "Y"],is.factor))])
+		colnames(tempdf) <- names(	which(	sapply(newdata,is.factor)	)	)
+		newdata <- data.frame(numericcolumns,tempdf)
+			
+		rm(tempdf)
+
+	
+} else {
+		
+		newdata <- data.frame(numericcolumns)
+
+}
 
 rm(numericcolumns)
 

@@ -2,7 +2,7 @@
 \alias{kernelFactory}
 \title{Binary classification with Kernel Factory}
 \description{
-\code{kernelFactory} implements an ensemble method for kernel machines (Ballings and Van den Poel, 2012).
+\code{kernelFactory} implements an ensemble method for kernel machines (Ballings and Van den Poel, 2013).
 }
 \usage{
 kernelFactory(x = NULL, 
@@ -14,7 +14,7 @@ kernelFactory(x = NULL,
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
-A data frame of predictors.
+A data frame of predictors. Categorical variables need to be factors.
 }
   \item{y}{
 A factor containing the response vector.
@@ -66,7 +66,8 @@ trainingset <- Credit[1:1:floor(0.50*nrow(Credit)),]
 testset <- Credit[(floor(0.50*nrow(Credit))+1 ):nrow(Credit),]
 
 #Train Kernel Factory on training data
-kFmodel <- kernelFactory(x=trainingset[,names(trainingset)!= "Response"], y=trainingset$Response, method=random)
+kFmodel <- kernelFactory(x=trainingset[,names(trainingset)!= "Response"], 
+           y=trainingset$Response, method=random)
 
 #Deploy Kernel Factory to predict response for test data
 #predictedresponse <- predict(kFmodel, newdata=testset[,names(testset)!= "Response"])

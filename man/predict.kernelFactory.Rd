@@ -39,7 +39,8 @@ trainingset <- Credit[1:1:floor(0.50*nrow(Credit)),]
 testset <- Credit[(floor(0.50*nrow(Credit))+1 ):nrow(Credit),]
 
 #Train Kernel Factory on training data
-kFmodel <- kernelFactory(x=trainingset[,names(trainingset)!= "Response"], y=trainingset$Response, method=random)
+kFmodel <- kernelFactory(x=trainingset[,names(trainingset)!= "Response"], 
+                         y=trainingset$Response, method=random)
 
 #Deploy Kernel Factory to predict response for test data
 predictedresponse <- predict(kFmodel, newdata=testset[,names(testset)!= "Response"])

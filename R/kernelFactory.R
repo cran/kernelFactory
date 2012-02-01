@@ -53,8 +53,33 @@ function(x=NULL,
 
 
 
-	datasets[[1]] <- data.frame(numericcolumnsTRAIN,datasets[[1]][,sapply(datasets[[1]],is.factor)])
-	datasets[[2]] <- data.frame(numericcolumnsVAL,datasets[[2]][,sapply(datasets[[2]],is.factor)])
+
+
+	if ( length(data.frame(datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))])) > 1 ) {
+		
+		datasets[[1]] <- data.frame(numericcolumnsTRAIN,datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))], Y=datasets[[1]]$Y)
+		datasets[[2]] <- data.frame(numericcolumnsVAL,  datasets[[2]][,which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor))], Y=datasets[[2]]$Y)
+	
+	} else if ( length(data.frame(datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))])) == 1 ) {
+		
+		tempdf <- data.frame(datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))])
+		colnames(tempdf) <- names(which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor)))
+		datasets[[1]] <- data.frame(numericcolumnsTRAIN,tempdf, Y=datasets[[1]]$Y)
+			
+		rm(tempdf)
+
+		tempdf <- data.frame(datasets[[2]][,which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor))])
+		colnames(tempdf) <- names(which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor)))
+		datasets[[2]] <- data.frame(numericcolumnsTRAIN,tempdf, Y=datasets[[2]]$Y)
+
+		rm(tempdf)
+	
+	} else {
+		
+		datasets[[1]] <- data.frame(numericcolumnsTRAIN, Y=datasets[[1]]$Y)
+		datasets[[2]] <- data.frame(numericcolumnsVAL,   Y=datasets[[2]]$Y)
+	}
+
 
 
 	
