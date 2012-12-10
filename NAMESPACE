@@ -1,0 +1,5 @@
+import(randomForest,ROCR,genalg,kernlab)
+
+export(kernelFactory)
+export(kFNews)
+S3method(predict, kernelFactory)

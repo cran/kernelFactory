@@ -1,0 +1,9 @@
+Planned changes in next versions:
+
+* several speed improvements
+* parameters for base classifiers and genetic algorithm
+* plot function
+* combine function that allows parallel computation
+* other base classifiers
+
+
