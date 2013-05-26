@@ -1,13 +1,14 @@
 Package: kernelFactory
+Type: Package
 Title: Kernel Factory: An ensemble of kernel Machines
-Version: 0.1.1
-Date: 2012-02-01
+Version: 0.1.2
+Date: 2013-05-26
 Imports: randomForest, ROCR, genalg, kernlab
 Author: Michel Ballings, Dirk Van den Poel
-Description: Classification based on an ensemble of kernel machines
 Maintainer: Michel Ballings <Michel.Ballings@UGent.be>
+Description: Classification based on an ensemble of kernel machines
 License: GPL (>= 2)
-URL: http://cran.r-project.org/web/packages/kernelFactory/
-Packaged: 2013-02-01 13:21:56 UTC; mballing
+Packaged: 2013-05-26 21:26:39 UTC; user
+NeedsCompilation: no
 Repository: CRAN
-Date/Publication: 2013-02-01 16:05:16
+Date/Publication: 2013-05-27 07:34:22

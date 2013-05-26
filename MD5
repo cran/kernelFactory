@@ -1,12 +1,11 @@
-bbb39cab0dfecbb4b8f66e7c70a53c99 *DESCRIPTION
+30d4c1a63dd5fcda88cc45e4b1c5004e *DESCRIPTION
 24fac76c9c9cbc211a641270957e7c12 *NAMESPACE
 8fdc3d736eff374b4e9f75081cea5bf8 *R/kFNews.R
-ad6ee9eb38e8c1dd7d025eae08811c53 *R/kernelFactory-internal.R
-310a59fc04e465197fd8531358966392 *R/kernelFactory.R
+277f628bcbf9d2bdbe85d1ddfc4d5c24 *R/kernelFactory.R
 19fff46fb7917fd373a560419a5884fc *R/predict.kernelFactory.R
 cc12e5a6084149ffbaef417b3f6e8414 *data/Credit.rda
 020642b4154b91d1f1b5bb946fbbf69c *inst/CITATION
-ba5725cfe77136251bad8397ea239d7c *inst/NEWS
+0967677c6f334550fb6e2c1595ce8be6 *inst/NEWS
 dd444391b46db24be26c235a1de26d95 *man/Credit.Rd
 3cfebe14795d241d7c65f14e3e586946 *man/kFNews.Rd
 f047359827e92e8bef29a8a37e78f173 *man/kernelFactory.Rd

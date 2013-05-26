@@ -9,7 +9,12 @@ Planned changes in next versions:
 ---------------------------------------------------------------
 Change log:
 
-* Version 0.1.1:
+* Version 0.1.2: May 2013
+- Fixed a bug that could occur in very rare cases
+
+* Version 0.1.1: February 2013
 - Fixed a bug that occured for data frames with only numeric features
 
+* Version 0.1.0: November 2012
+- Package submitted to CRAN with two functions: kernelFactory and predict.kernelFactory
 

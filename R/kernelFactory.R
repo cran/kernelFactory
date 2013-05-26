@@ -1,6 +1,4 @@
-
-	
-kernelFactory <- 
+kernelFactory <-
 function(x=NULL,
 	   y=NULL, 
 	   cp=1, 
@@ -70,7 +68,7 @@ function(x=NULL,
 
 		tempdf <- data.frame(datasets[[2]][,which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor))])
 		colnames(tempdf) <- names(which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor)))
-		datasets[[2]] <- data.frame(numericcolumnsTRAIN,tempdf, Y=datasets[[2]]$Y)
+		datasets[[2]] <- data.frame(numericcolumnsVAL,tempdf, Y=datasets[[2]]$Y)
 
 		rm(tempdf)
 	
@@ -429,7 +427,3 @@ class(result) <- "kernelFactory"
 
 return(result)
 }
-
-
-
-
