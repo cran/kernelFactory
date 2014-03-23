@@ -1,11 +1,64 @@
+#' Binary classification with Kernel Factory
+#'
+#' \code{kernelFactory} implements an ensemble method for kernel machines (Ballings and Van den Poel, 2013).
+#' 
+#' @param x A data frame of predictors (numeric, integer or factor). Categorical variables need to be factors.
+#' @param y A factor containing the response vector. Only \{0,1\} is allowed.
+#' @param cp The number of column partitions.
+#' @param rp The number of row partitions.
+#' @param method Can be one of the following: POLynomial kernel function (\code{pol}), LINear kernel function (\code{lin}), Radial Basis kernel Function \code{rbf}), random choice (random={pol, lin, rbf}) (\code{random}), burn- in choice of best function (burn={pol, lin, rbf }) (\code{burn}). Use \code{random} or \code{burn} if you don't know in advance which kernel function is best.
+#' @param ntree Number of trees in the Random Forest base classifiers.
+#' @param popSize Population size of the genetic algorithm.
+#' @param iters  Number of generations of the genetic algorithm.
+#' @param mutationChance Mutationchance of the genetic algorithm.
+#' @param elitism  Elitism parameter of the genetic algorithm.
+#' @examples
+#' #Credit Approval data available at UCI Machine Learning Repository
+#' data(Credit)
+#' #take subset (for the purpose of a quick example) and train and test
+#' Credit <- Credit[1:100,]
+#' train.ind <- sample(nrow(Credit),round(0.5*nrow(Credit)))
+#' 
+#' #Train Kernel Factory on training data
+#' kFmodel <- kernelFactory(x=Credit[train.ind,names(Credit)!= "Response"], 
+#'           y=Credit[train.ind,"Response"], method=random)
+#'  
+#' #Deploy Kernel Factory to predict response for test data
+#' #predictedresponse <- predict(kFmodel, newdata=Credit[-train.ind,names(Credit)!= "Response"])
+#' @references Ballings, M. and Van den Poel, D. (2013), Kernel Factory: An Ensemble of Kernel Machines. Expert Systems With Applications, 40(8), 2904-2913.
+#' @seealso \code{\link{predict.kernelFactory}}
+#' @return An object of class \code{kernelFactory}, which is a list with the following elements:
+#'   \item{trn}{Training data set.}
+#'   \item{trnlst}{List of training partitions.}
+#'   \item{rbfstre}{List of used kernel functions.}
+#'   \item{rbfmtrX}{List of augmented kernel matrices.}
+#'   \item{rsltsKF}{List of models.}
+#'   \item{cpr}{Number of column partitions.}
+#'   \item{rpr}{Number of row partitions.}
+#'   \item{cntr}{Number of partitions.}
+#'   \item{wghts}{Weights of the ensemble members.}
+#'   \item{nmDtrn}{Vector indicating the numeric (and integer) features.}
+#'   \item{rngs}{Ranges of numeric predictors.}
+#' @author Authors: Michel Ballings and Dirk Van den Poel, Maintainer: \email{Michel.Ballings@@GMail.com}
+#' @keywords classification
 kernelFactory <-
 function(x=NULL,
 	   y=NULL, 
 	   cp=1, 
-	   rp=round(log(ncol(x)+1,4)), 
-	   method="burn" ){
-	
-	
+	   rp=round(log(nrow(x),10)), 
+	   method="burn" ,
+     ntree=500,
+     popSize = rp*cp*7,
+     iters = 80, 
+     mutationChance = 1/ (rp*cp),
+     elitism= max(1, round((rp*cp)*0.05))){
+  
+  
+  #ERROR HANDLING
+  if (!is.data.frame(x)) stop("x must be a data frame")
+  
+  if (sum(sapply(x,function(x){all(as.numeric(x[1])==as.numeric(x))})) >= 1) stop("remove constants from data frame")
+  
 	if (is.null(x) || is.null(y)) {
 		stop("x or y cannot be NULL.")
 	}else if (any(is.na(x)) || any(is.na(y))){
@@ -21,83 +74,63 @@ function(x=NULL,
 
 	if (length(y) != nrow(x)) stop("x and dependent variable have to be of equal length.")
 
-
-	x <- data.frame(x,Y=y)
-	
-
-	x <- data.frame(x[order(runif(nrow(x))),])
-	trainingset <- data.frame(x)[1:1:floor(0.75*nrow(x)),]
-
-	validationset <- data.frame(x)[(floor(0.75*nrow(x))+1 ):nrow(x),]
-	datasets <- list(trainingset,validationset)
-
-	
-
-
-	 	
-	numIDtrain <- sapply(datasets[[1]],is.numeric)
-	numericcolumnsTRAIN <- datasets[[1]][,numIDtrain ]
-	numericcolumnsVAL <- datasets[[2]][,numIDtrain ]
-
-
-	ranges <- data.frame()
-	ranges <- data.frame(sapply(numericcolumnsTRAIN ,range))
-	ranges[3,] <- ranges[2,]- ranges[1,]
-	ranges[3,][ranges[3,]==0] <- 1
-
-	numericcolumnsTRAIN <- data.frame(t(t(numericcolumnsTRAIN)/as.numeric(ranges[3,])))
-	numericcolumnsVAL <- data.frame(t(t(numericcolumnsVAL)/as.numeric(ranges[3,])))
-
-
-
-
-
-
-	if ( length(data.frame(datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))])) > 1 ) {
+  #STEP0 SEPERATE DATA INTO TRAINING AND VALIDATION
 		
-		datasets[[1]] <- data.frame(numericcolumnsTRAIN,datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))], Y=datasets[[1]]$Y)
-		datasets[[2]] <- data.frame(numericcolumnsVAL,  datasets[[2]][,which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor))], Y=datasets[[2]]$Y)
+  train.ind <- sample(nrow(x),round(0.75*nrow(x)))
 	
-	} else if ( length(data.frame(datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))])) == 1 ) {
-		
-		tempdf <- data.frame(datasets[[1]][,which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor))])
-		colnames(tempdf) <- names(which(sapply(datasets[[1]][,names(datasets[[1]]) != "Y"],is.factor)))
-		datasets[[1]] <- data.frame(numericcolumnsTRAIN,tempdf, Y=datasets[[1]]$Y)
-			
-		rm(tempdf)
-
-		tempdf <- data.frame(datasets[[2]][,which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor))])
-		colnames(tempdf) <- names(which(sapply(datasets[[2]][,names(datasets[[2]]) != "Y"],is.factor)))
-		datasets[[2]] <- data.frame(numericcolumnsVAL,tempdf, Y=datasets[[2]]$Y)
-
-		rm(tempdf)
-	
-	} else {
-		
-		datasets[[1]] <- data.frame(numericcolumnsTRAIN, Y=datasets[[1]]$Y)
-		datasets[[2]] <- data.frame(numericcolumnsVAL,   Y=datasets[[2]]$Y)
-	}
-
-
-
-	
-	rm(numericcolumnsTRAIN)
-	rm(numericcolumnsVAL)
+  xtrain <- x[train.ind,]
+  ytrain <- y[train.ind]
+  
+  xtest <-  x[-train.ind,]
+  ytest <-  y[-train.ind]
+  
 	
 
-	train <- datasets[[1]]
-	test <- datasets[[2]]
+  #STEP1 ### SCALING 
+	
+  #select only numerics and integers
+	numIDtrain <- sapply(xtrain,is.numeric)
+  
+	numericcolumnsTRAIN <- data.frame(xtrain[,numIDtrain ])
+	numericcolumnsVAL <- data.frame(xtest[,numIDtrain ])
+  colnames(numericcolumnsTRAIN) <- colnames(numericcolumnsVAL) <- colnames(xtrain)[numIDtrain]
 
+  #scale
+  ranges <- sapply(numericcolumnsTRAIN ,function(x) max(x)-min(x))
+  numericcolumnsTRAIN <- data.frame(base::scale(numericcolumnsTRAIN,center=FALSE,scale=ranges))
+  numericcolumnsVAL   <- data.frame(base::scale(numericcolumnsVAL,center=FALSE,scale=ranges))
+  
+  
+  #add factor variables and response
+  facID <- sapply(xtrain,is.factor)
+  if (sum(facID) >= 1){
+  
+  
+    train <- data.frame(numericcolumnsTRAIN,xtrain[,facID],Y=ytrain)
+    test <- data.frame(numericcolumnsVAL,xtest[,facID],Y=ytest)
+    
+    # in case there is only 1 factor: set colnames
+    colnames(train) <- colnames(test) <- c(colnames(numericcolumnsTRAIN),names(facID)[facID],"Y")
+  } else {
+      	
+		train <- data.frame(numericcolumnsTRAIN, Y=ytrain)
+		test  <- data.frame(numericcolumnsVAL, Y=ytest)
+  }
+  
+  rm(xtrain,xtest,ytrain,ytest,numericcolumnsTRAIN,numericcolumnsVAL)
+  
 
-
+#STEP2 ### RANDOMLY ORDER ROWS AND COLUMNS
 	train <- data.frame(train[order(runif(nrow(train))),order(runif(ncol(train)))])
 	train <- data.frame(train[,names(train)!= "Y"], Y=train$Y)
 	
 	test <- test[,colnames(train)]
 
+  
 
+#STEP3 ### CREATE PARTITIONS 
 
-	
+  #STEP 3.1 ### PARTITIONS FOR TRAINING SET	
 	trainlist <- list()
 	colparts <- cp
 	rowparts <- rp
@@ -105,13 +138,13 @@ function(x=NULL,
 	startcol <- 1
 	counter <- 0
 	
-	
+  #HANDLE UNEVEN NUMBER OF VARIABLES	
 	if (ncol(train[,names(train)!= "Y"])%%colparts > 0) {
 	numbercols <- ncol(train[,names(train)!= "Y"])-(ncol(train[,names(train)!= "Y"])%%colparts )
 	} else {
 	numbercols <- ncol(train[,names(train)!= "Y"]) }
 
-	
+	 #HANDLE UNEVEN NUMBER OF ROWS
 	if (nrow(train)%%rowparts > 0) {
 	numberrows <- nrow(train)-(nrow(train)%%rowparts )
 	} else {
@@ -146,14 +179,14 @@ function(x=NULL,
 
 
 
-	
+	#STEP 3.2 ### PARTITIONS FOR TEST SET
 	testlist <- list()
 	colparts <- colparts
 	rowparts <- rowparts 
 
 	startcol <- 1
 	counter <- 0
-	
+	#HANDLE UNEVEN NUMBER OF VARIABLES
 	if (ncol(test[,names(test)!= "Y"])%%colparts > 0) {
 	numbercols <- ncol(test[,names(test)!= "Y"])-(ncol(test[,names(test)!= "Y"])%%colparts )
 	} else {
@@ -172,9 +205,9 @@ function(x=NULL,
 				counter = counter + 1
 			
 				testlist[[counter]] <- test[,c(startcol:endcol,which(colnames(test)=="Y"))]
-				
+				#Checks: no empty classes in dependent
 				if (any(table(testlist[[counter]]$Y) == 0)) stop("Cannot have empty classes in y. Make sure number of rp is not too high.")
-				
+				#Can only have 2 classes (not less, not more)
 				if (length(unique(testlist[[counter]]$Y)) != 2) stop("Must have 2 classes. Make sure number of rp is not too high.")
 
 	
@@ -188,15 +221,13 @@ function(x=NULL,
 
 
 
-
-
-	
+#STEP4 ### BUILD MODELS 	
 	rbfstore <- list()
 	rbfmatrX <- data.frame()
 	resultsKF <- data.frame()
 
 
-	
+	#STEP 4.0 APPLY METHOD	
 	
 	
 	if (as.character(substitute(method))=="rbf") {
@@ -247,14 +278,14 @@ function(x=NULL,
             
 		
 				
-				resultsKF  <-  	 randomForest(x=rbfmatrX,y=as.factor(rbfmatrY),  ntree=1000, importance=FALSE, na.action=na.omit)
+				resultsKF  <-  	 randomForest(x=rbfmatrX,y=as.factor(rbfmatrY),  ntree=ntree, proximity=FALSE, importance=FALSE, na.action=na.omit)
 				
 				
-				
+				#Extract split variables for all trees: these are observation numbers from the trainingdata: split observations
 				trainobs <- trainlist[[1]][,sapply(trainlist[[1]],is.numeric)]
 								
 																
-				
+				#compute dot product per split observation from training data with all validation observations: This results in 1 column per split observation
            
 								
 				resultsKFScored <- data.frame(data.frame(kernelMatrix(rbfstore[[ii]], as.matrix(testlist[[1]][,sapply(testlist[[1]],is.numeric)]),as.matrix(trainobs))),
@@ -265,16 +296,17 @@ function(x=NULL,
 					
 				predicted <- predict(resultsKF,resultsKFScored,type="prob")[,2]
 			
-				burnperf[[ii]] <- performance(prediction(predicted,testlist[[1]]$Y),"auc")@y.values[[1]]
-
+				burnperf[[ii]] <- AUC::auc(roc(predicted,testlist[[1]]$Y))
+                          
 			} else {
 				
-		 		resultsKF <-  randomForest(x=trainlist[[1]][,names(trainlist[[1]])!= "Y"],y=as.factor(trainlist[[1]]$Y),  ntree=1000, importance=FALSE, na.action=na.omit )
+		 		resultsKF <-  randomForest(x=trainlist[[1]][,names(trainlist[[1]])!= "Y"],y=as.factor(trainlist[[1]]$Y),  ntree=ntree, proximity=FALSE, importance=FALSE, na.action=na.omit )
 				
 				
 				predicted <- predict(resultsKF,testlist[[1]],type="prob")[,2]
 
-				burnperf[[ii]] <- performance(prediction(predicted,testlist[[1]]$Y),"auc")@y.values[[1]]
+				burnperf[[ii]] <- AUC::auc(roc(predicted,testlist[[1]]$Y))
+                          
   			}
 
 		}
@@ -294,7 +326,7 @@ function(x=NULL,
 
 	for (i in 1:counter) {
 
-			
+			#STEP 4.1 ### MODELING
 								
 			numID <- sapply(trainlist[[i]],is.numeric)
 			numericcolumns <- trainlist[[i]][,numID]
@@ -303,7 +335,7 @@ function(x=NULL,
 			if (is.null(trainlist[[i]][,sapply(trainlist[[i]],is.numeric)]) == FALSE) {
 								
 				
-				
+				#STEP 4.1 ### COMPUTE KERNEL MATRIX
 				rbfdt<-as.matrix(numericcolumns)
 				rbfmatr<-kernelMatrix(rbfstore[[i]], rbfdt)
 				rbfmatr <-  data.frame(rbfmatr)
@@ -318,15 +350,15 @@ function(x=NULL,
 
 
 				
-            
+        #STEP 4.3 BUILDING KERNEL MODELS    
 		
 				
-				resultsKF[[i]] <-   randomForest(x=rbfmatrX[[i]],y=as.factor(rbfmatrY),  ntree=1000, importance=FALSE, na.action=na.omit)
+				resultsKF[[i]] <-   randomForest(x=rbfmatrX[[i]],y=as.factor(rbfmatrY),  ntree=ntree, proximity=FALSE, importance=FALSE, na.action=na.omit)
 				
 
 			} else {
 				
-		 		resultsKF[[i]]  <-   randomForest(x=trainlist[[i]][,names(trainlist[[i]])!= "Y"],y=as.factor(trainlist[[i]]$Y),  ntree=1000, importance=FALSE, na.action=na.omit )
+		 		resultsKF[[i]]  <-   randomForest(x=trainlist[[i]][,names(trainlist[[i]])!= "Y"],y=as.factor(trainlist[[i]]$Y),  ntree=ntree, proximity=FALSE, importance=FALSE, na.action=na.omit )
 				
 
 			}
@@ -336,7 +368,9 @@ function(x=NULL,
 
 
 
+#STEP5 ### OPTIMIZE WEIGHTS
 
+  #STEP 5.1 PREPARING 
 	
 	predicted <- list()
 	resultsKFScored <- list()
@@ -348,12 +382,12 @@ function(x=NULL,
 	
 			if (is.null(trainlist[[i]][,sapply(trainlist[[i]],is.numeric)]) == FALSE) {
 	
-				
+				#Extract split variables for all trees: these are observation numbers from the trainingdata: split observations
 				trainobs <- trainlist[[i]][,sapply(trainlist[[i]],is.numeric)]
 								
 																
 				
-           
+        #compute dot product per split observation from training data with all validation observations: This results in 1 column per split observation   
 								
 				resultsKFScored[[i]] <- data.frame(data.frame(kernelMatrix(rbfstore[[i]], as.matrix(testlist[[i]][,sapply(testlist[[i]],is.numeric)]),as.matrix(trainobs))),
 													data.frame(testlist[[i]][,names(testlist[[i]])!= "Y"]))
@@ -361,7 +395,7 @@ function(x=NULL,
           			
 				colnames(resultsKFScored[[i]]) <- colnames(rbfmatrX[[i]])
 	
-				
+				#STEP 5.2 ACTUAL PREDICTION
 				predicted[[i]] <- predict(resultsKF[[i]],resultsKFScored[[i]],type="prob")[,2]
 				
 
@@ -378,33 +412,32 @@ function(x=NULL,
 
 
 
-	
+	#STEP 5.3 COLLECTING PREDICTIONS
 	final <- data.frame(matrix(nrow=nrow(test),ncol=(counter)))
 	for (i in 1:counter) {
 	final[,i] <- as.numeric(predicted[[i]])
 	}
 
 
-	
+	#STEP 5.4 Genetic algorithm
 	
 
 	evaluate <- function(string=c()) {
-	    returnVal = NA
-	    stringRepaired <- as.numeric(string)/sum(as.numeric(string))
-		returnVal = -performance(prediction(rowSums(t(as.numeric(stringRepaired ) * t(final))),testlist[[i]]$Y),"auc")@y.values[[1]]
-   
-	   returnVal
+ 
+     -AUC::auc(roc(as.numeric(rowSums(t(as.numeric(as.numeric(string)/sum(as.numeric(string))) * t(final)))),testlist[[i]]$Y ))
+   	   
 	}
 
 
 	rbga.results = rbga(rep(0,counter), rep(1,counter), 
-	suggestions=t( as.data.frame( c(rep((1/counter),counter)))), popSize=40, iters=80,  mutationChance=0.01, evalFunc=evaluate)
+	                    suggestions=t( as.data.frame( c(rep((1/counter),counter)))), 
+                      popSize=popSize, 
+                      iters=iters,  
+                      mutationChance=mutationChance, 
+                      elitism=elitism,
+                      evalFunc=evaluate)
 
 	
-
-
-	
-
 
 	weights <- rbga.results$population[which.min(rbga.results$evaluations),]
 
@@ -421,7 +454,7 @@ result <- list(trn=train,
 		   cntr=counter,  					
 		   wghts=weights,  					
 		   nmDtrn=numIDtrain ,  					
-		   rngs=ranges[3,]  ) 
+		   rngs=ranges  ) 
 
 class(result) <- "kernelFactory"					
 

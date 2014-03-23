@@ -1,4 +1,4 @@
-import(randomForest,ROCR,genalg,kernlab)
+import(randomForest,AUC,genalg,kernlab)
 
 export(kernelFactory)
 export(kFNews)
