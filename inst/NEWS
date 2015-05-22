@@ -1,11 +1,15 @@
 Planned changes in next versions:
 
 * combine function that allows parallel computation
-* stratified sampling to avoid problems when too many row partitions
-* more refactoring
-
+* more refactoring to reduce the memory footprint (store indices instead subsets)
+* stratified sampling when creating row partitions to avoid problems when too many row partitions
+* check for constants in subsets
 ---------------------------------------------------------------
 Change log:
+
+* Version 0.2.1: May 2015
+-stratified sampling when making training and test set
+-parameter for oversampling to avoid problems related to subsetting
 
 * Version 0.2.0: March 2014
 -fix print when loading package

@@ -2,7 +2,7 @@
 #'
 #' \code{kernelFactory} implements an ensemble method for kernel machines (Ballings and Van den Poel, 2013).
 #' 
-#' @param x A data frame of predictors (numeric, integer or factor). Categorical variables need to be factors.
+#' @param x A data frame of predictors (numeric, integer or factor). Categorical variables need to be factors. Indicator values should not be too imbalanced because this might produce constants in the subsetting process.
 #' @param y A factor containing the response vector. Only \{0,1\} is allowed.
 #' @param cp The number of column partitions.
 #' @param rp The number of row partitions.
@@ -12,6 +12,7 @@
 #' @param iters  Number of generations of the genetic algorithm.
 #' @param mutationChance Mutationchance of the genetic algorithm.
 #' @param elitism  Elitism parameter of the genetic algorithm.
+#' @param oversample  Oversample the smallest class. This helps avoid problems related to the subsetting procedure (e.g., if rp is too high).
 #' @examples
 #' #Credit Approval data available at UCI Machine Learning Repository
 #' data(Credit)
@@ -42,7 +43,7 @@
 #' @author Authors: Michel Ballings and Dirk Van den Poel, Maintainer: \email{Michel.Ballings@@GMail.com}
 #' @keywords classification
 kernelFactory <-
-function(x=NULL,
+function(x=NULL, 
 	   y=NULL, 
 	   cp=1, 
 	   rp=round(log(nrow(x),10)), 
@@ -51,7 +52,8 @@ function(x=NULL,
      popSize = rp*cp*7,
      iters = 80, 
      mutationChance = 1/ (rp*cp),
-     elitism= max(1, round((rp*cp)*0.05))){
+     elitism= max(1, round((rp*cp)*0.05)),
+     oversample=TRUE){
   
   
   #ERROR HANDLING
@@ -74,9 +76,43 @@ function(x=NULL,
 
 	if (length(y) != nrow(x)) stop("x and dependent variable have to be of equal length.")
 
+  #OVERSAMPLING
+  if (oversample) {
+    tab <- table(y)
+    #oversample instances from the smallest class
+    indmin <- sample(which(y==as.integer(names(which.min(tab)))),max(tab),replace=TRUE)
+    #take all the instances of the dominant class
+    indmax <- which(y==as.integer(names(which.max(tab))))
+    x <- x[c(indmin,indmax),]
+    y <- y[c(indmin,indmax)]    
+  }
+  
   #STEP0 SEPERATE DATA INTO TRAINING AND VALIDATION
-		
-  train.ind <- sample(nrow(x),round(0.75*nrow(x)))
+
+  .partition <- function(y,p=0.5,times=1) {
+  
+  #STEP 1: split up 0 and 1
+  class1_ind <- which(y==as.integer(levels(y)[1]))
+  class2_ind <- which(y==as.integer(levels(y)[2]))
+  
+  l <- list()
+  for (i in 1:times){
+  
+  #STEP 2: take subsamples for both 0 and 1
+  class1_ind_train <- sample(class1_ind, floor(p*table(y)[1]),replace=FALSE)
+  class2_ind_train <- sample(class2_ind, floor(p*table(y)[2]),replace=FALSE)
+
+  class1_ind_test <- class1_ind[!class1_ind %in% class1_ind_train]
+  class2_ind_test <- class2_ind[!class2_ind %in% class2_ind_train]
+
+  #STEP 3: combine 0 and 1 for both train and test
+  
+  l[[i]] <- list(train=c(class1_ind_train,class2_ind_train),test=c(class1_ind_test,class2_ind_test))
+  }
+  l
+  }
+  
+  train.ind <- .partition(y,0.75)[[1]]$train
 	
   xtrain <- x[train.ind,]
   ytrain <- y[train.ind]
