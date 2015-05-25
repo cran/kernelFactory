@@ -30,6 +30,8 @@ function(object,
    newdata=NULL, ...  )
 {
   
+  newdata <- newdata[,!object$constants]
+  
   #ERROR HANDLING
   if (!inherits(object, "kernelFactory")) stop("object not of class kernelFactory")
   

@@ -8,6 +8,7 @@
 #' @param rp The number of row partitions.
 #' @param method Can be one of the following: POLynomial kernel function (\code{pol}), LINear kernel function (\code{lin}), Radial Basis kernel Function \code{rbf}), random choice (random={pol, lin, rbf}) (\code{random}), burn- in choice of best function (burn={pol, lin, rbf }) (\code{burn}). Use \code{random} or \code{burn} if you don't know in advance which kernel function is best.
 #' @param ntree Number of trees in the Random Forest base classifiers.
+#' @param filter either NULL (deactivate) or a percentage denoting the minimum class size of dummy predictors. This parameter is used to remove near constants. For example if nrow(xTRAIN)=100, and filter=0.01 then all dummy predictors with any class size equal to 1 will be removed. Set this higher (e.g., 0.05 or 0.10) in case of errors.
 #' @param popSize Population size of the genetic algorithm.
 #' @param iters  Number of generations of the genetic algorithm.
 #' @param mutationChance Mutationchance of the genetic algorithm.
@@ -40,6 +41,7 @@
 #'   \item{wghts}{Weights of the ensemble members.}
 #'   \item{nmDtrn}{Vector indicating the numeric (and integer) features.}
 #'   \item{rngs}{Ranges of numeric predictors.}
+#'   \item{constants}{To exclude from newdata.}
 #' @author Authors: Michel Ballings and Dirk Van den Poel, Maintainer: \email{Michel.Ballings@@GMail.com}
 #' @keywords classification
 kernelFactory <-
@@ -49,6 +51,7 @@ function(x=NULL,
 	   rp=round(log(nrow(x),10)), 
 	   method="burn" ,
      ntree=500,
+     filter= 0.01,
      popSize = rp*cp*7,
      iters = 80, 
      mutationChance = 1/ (rp*cp),
@@ -59,7 +62,6 @@ function(x=NULL,
   #ERROR HANDLING
   if (!is.data.frame(x)) stop("x must be a data frame")
   
-  if (sum(sapply(x,function(x){all(as.numeric(x[1])==as.numeric(x))})) >= 1) stop("remove constants from data frame")
   
 	if (is.null(x) || is.null(y)) {
 		stop("x or y cannot be NULL.")
@@ -76,15 +78,21 @@ function(x=NULL,
 
 	if (length(y) != nrow(x)) stop("x and dependent variable have to be of equal length.")
 
+
   #OVERSAMPLING
-  if (oversample) {
-    tab <- table(y)
-    #oversample instances from the smallest class
-    indmin <- sample(which(y==as.integer(names(which.min(tab)))),max(tab),replace=TRUE)
-    #take all the instances of the dominant class
-    indmax <- which(y==as.integer(names(which.max(tab))))
-    x <- x[c(indmin,indmax),]
-    y <- y[c(indmin,indmax)]    
+  tab <- table(y)
+  if (!all(tab==tab[1])){
+      if (oversample) {
+
+        #oversample instances from the smallest class
+        whichmin <- which(y==as.integer(names(which.min(tab))))
+        indmin <- sample(whichmin,max(tab),replace=TRUE)
+        indmin <- c(whichmin,indmin)[1:max(tab)]
+        #take all the instances of the dominant class
+        indmax <- which(y==as.integer(names(which.max(tab))))
+        x <- x[c(indmin,indmax),]
+        y <- y[c(indmin,indmax)]    
+      }
   }
   
   #STEP0 SEPERATE DATA INTO TRAINING AND VALIDATION
@@ -120,7 +128,11 @@ function(x=NULL,
   xtest <-  x[-train.ind,]
   ytest <-  y[-train.ind]
   
-	
+	constants <- sapply(xtrain,function(x){all(as.numeric(x[1])==as.numeric(x))})
+  if (!is.null(filter)) constants <- sapply(xtrain,function(x) length(unique(x))<=2 && any(table(x) <= round(nrow(xtrain)*filter)))
+  xtrain <- xtrain[,!constants]
+  xtest <- xtest[,!constants]
+
 
   #STEP1 ### SCALING 
 	
@@ -490,7 +502,8 @@ result <- list(trn=train,
 		   cntr=counter,  					
 		   wghts=weights,  					
 		   nmDtrn=numIDtrain ,  					
-		   rngs=ranges  ) 
+		   rngs=ranges,
+       constants=constants  ) 
 
 class(result) <- "kernelFactory"					
 

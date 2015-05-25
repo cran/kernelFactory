@@ -7,9 +7,14 @@ Planned changes in next versions:
 ---------------------------------------------------------------
 Change log:
 
+* Version 0.2.2: June 2015
+-improved oversampling in balanced cases
+-automatically remove constants and/ or near constants (filter parameter)
+
 * Version 0.2.1: May 2015
 -stratified sampling when making training and test set
 -parameter for oversampling to avoid problems related to subsetting
+-added oversampling
 
 * Version 0.2.0: March 2014
 -fix print when loading package

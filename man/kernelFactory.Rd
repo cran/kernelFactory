@@ -5,9 +5,9 @@
 \title{Binary classification with Kernel Factory}
 \usage{
 kernelFactory(x = NULL, y = NULL, cp = 1, rp = round(log(nrow(x), 10)),
-  method = "burn", ntree = 500, popSize = rp * cp * 7, iters = 80,
-  mutationChance = 1/(rp * cp), elitism = max(1, round((rp * cp) * 0.05)),
-  oversample = TRUE)
+  method = "burn", ntree = 500, filter = 0.01, popSize = rp * cp * 7,
+  iters = 80, mutationChance = 1/(rp * cp), elitism = max(1, round((rp *
+  cp) * 0.05)), oversample = TRUE)
 }
 \arguments{
 \item{x}{A data frame of predictors (numeric, integer or factor). Categorical variables need to be factors. Indicator values should not be too imbalanced because this might produce constants in the subsetting process.}
@@ -21,6 +21,8 @@ kernelFactory(x = NULL, y = NULL, cp = 1, rp = round(log(nrow(x), 10)),
 \item{method}{Can be one of the following: POLynomial kernel function (\code{pol}), LINear kernel function (\code{lin}), Radial Basis kernel Function \code{rbf}), random choice (random={pol, lin, rbf}) (\code{random}), burn- in choice of best function (burn={pol, lin, rbf }) (\code{burn}). Use \code{random} or \code{burn} if you don't know in advance which kernel function is best.}
 
 \item{ntree}{Number of trees in the Random Forest base classifiers.}
+
+\item{filter}{either NULL (deactivate) or a percentage denoting the minimum class size of dummy predictors. This parameter is used to remove near constants. For example if nrow(xTRAIN)=100, and filter=0.01 then all dummy predictors with any class size equal to 1 will be removed. Set this higher (e.g., 0.05 or 0.10) in case of errors.}
 
 \item{popSize}{Population size of the genetic algorithm.}
 
@@ -45,6 +47,7 @@ An object of class \code{kernelFactory}, which is a list with the following elem
   \item{wghts}{Weights of the ensemble members.}
   \item{nmDtrn}{Vector indicating the numeric (and integer) features.}
   \item{rngs}{Ranges of numeric predictors.}
+  \item{constants}{To exclude from newdata.}
 }
 \description{
 \code{kernelFactory} implements an ensemble method for kernel machines (Ballings and Van den Poel, 2013).
