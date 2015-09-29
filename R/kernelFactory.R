@@ -129,7 +129,7 @@ function(x=NULL,
   ytest <-  y[-train.ind]
   
 	constants <- sapply(xtrain,function(x){all(as.numeric(x[1])==as.numeric(x))})
-  if (!is.null(filter)) constants <- sapply(xtrain,function(x) length(unique(x))<=2 && any(table(x) <= round(nrow(xtrain)*filter)))
+  if (!is.null(filter)) constants <- sapply(xtrain,function(x) (length(unique(x))==2 && any(table(x) <= round(nrow(xtrain)*filter))) || all(as.numeric(x[1])==as.numeric(x))   )
   xtrain <- xtrain[,!constants]
   xtest <- xtest[,!constants]
 

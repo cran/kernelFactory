@@ -4,6 +4,7 @@
 #' 
 #' @param object An object of class \code{kernelFactory}, as created by the function \code{kernelFactory}
 #' @param newdata A data frame with the same predictors as in the training data.
+#' @param predict.all TRUE or FALSE. If TRUE and rp and cp are 1 then the individual predictions of the random forest are returned. If TRUE and any of rp and cp or bigger than 1 then the predictions of all the members are returned.
 #' @param ... Not used currently.
 #' 
 #' @examples
@@ -27,7 +28,7 @@
 #' @keywords classification
 predict.kernelFactory <-
 function(object, 
-   newdata=NULL, ...  )
+   newdata=NULL, predict.all=FALSE, ...  )
 {
   
   newdata <- newdata[,!object$constants]
@@ -136,30 +137,55 @@ data.frame(testlist[[i]]))
 colnames(resultsKIRFScored[[i]]) <- colnames(object$rbfmtrX[[i]])
 
 #STEP 5.2 ACTUAL PREDICTION
-predicted[[i]] <- predict(object$rsltsKF[[i]],resultsKIRFScored[[i]],type="prob")[,2]
-
+    if (predict.all && object$cpr==1 && object$rpr==1 ) { # predict.all
+    predicted[[i]]  <- data.frame(sapply(data.frame(predict(object$rsltsKF[[i]], 
+                                                        resultsKIRFScored[[i]],type="prob", 
+                                                        predict.all=TRUE)$individual,
+                                                stringsAsFactors=FALSE),
+                                     as.integer,
+                                     simplify=FALSE)
+                              )
+  } else { #combined prediction
+    predicted[[i]] <- predict(object$rsltsKF[[i]],resultsKIRFScored[[i]],type="prob")[,2]
+  }
 
 
 } else {
-predicted[[i]] <- predict(object$rsltsKF[[i]],testlist[[i]],type="prob")[,2]
-
+  
+  if (predict.all && object$cpr==1 && object$rpr==1 ) { #predict.all
+    predicted[[i]]  <- data.frame(sapply(data.frame(predict(object$rsltsKF[[i]], 
+                                                        testlist[[i]],type="prob", 
+                                                        predict.all=TRUE)$individual,
+                                                stringsAsFactors=FALSE),
+                                     as.integer,
+                                     simplify=FALSE)
+                              )
+  } else { #combined prediction
+    predicted[[i]] <- predict(object$rsltsKF[[i]],testlist[[i]],type="prob")[,2]
+  }
 
 }
 }
 
+if (predict.all && object$cpr==1 && object$rpr==1  ) {
+  return(predicted[[1]])
+} else {
+  
+    #STEP 5.3 COLLECTING PREDICTIONS
+    final <- data.frame(matrix(nrow=nrow(newdata),ncol=(object$cntr)))
+    for (i in 1:object$cntr) {
+    final[,i] <- predicted[[i]]
+    }
 
-#STEP 5.3 COLLECTING PREDICTIONS
-final <- data.frame(matrix(nrow=nrow(newdata),ncol=(object$cntr)))
-for (i in 1:object$cntr) {
-final[,i] <- predicted[[i]]
+    
+    #STEP 5.4 APPLYING WEIGHTS  
+    res <- t(as.numeric(object$wghts) * t(final))
+
+    if (predict.all) {
+      return(data.frame(final))
+    } else {
+      return(rowSums(res))
+    }
 }
-
-
-
-
-#STEP 5.4 APPLYING WEIGHTS  
-result <- rowSums(t(as.numeric(object$wghts) * t(final)))
-
-
-return(result)
+  
 }

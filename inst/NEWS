@@ -4,10 +4,14 @@ Planned changes in next versions:
 * more refactoring to reduce the memory footprint (store indices instead subsets)
 * stratified sampling when creating row partitions to avoid problems when too many row partitions
 * check for constants in subsets
+
 ---------------------------------------------------------------
 Change log:
+* Version 0.3.0: Sep 2015
+-added predict.all parameter
+-fixed a bug related to the filter parameter
 
-* Version 0.2.2: June 2015
+* Version 0.2.2: May 2015
 -improved oversampling in balanced cases
 -automatically remove constants and/ or near constants (filter parameter)
 

@@ -4,12 +4,15 @@
 \alias{predict.kernelFactory}
 \title{Predict method for kernelFactory objects}
 \usage{
-\method{predict}{kernelFactory}(object, newdata = NULL, ...)
+\method{predict}{kernelFactory}(object, newdata = NULL, predict.all = FALSE,
+  ...)
 }
 \arguments{
 \item{object}{An object of class \code{kernelFactory}, as created by the function \code{kernelFactory}}
 
 \item{newdata}{A data frame with the same predictors as in the training data.}
+
+\item{predict.all}{TRUE or FALSE. If TRUE and rp and cp are 1 then the individual predictions of the random forest are returned. If TRUE and any of rp and cp or bigger than 1 then the predictions of all the members are returned.}
 
 \item{...}{Not used currently.}
 }
